@@ -5,7 +5,7 @@
   Internet of Things - First Challenge
   Project Title: Smart Home Motion & Light Sensor
   Pietro Pizzoccheri: 10797420
-  Lorenzo Bardelli: TODO
+  Lorenzo Bardelli: 10831941
 */
 
 #define TEAM_LEADER_CODE 10797420 
@@ -27,7 +27,7 @@ esp_now_peer_info_t ESP_sink; // peer data
 
 //  functions' prototypes  //
 void wifiInit();
-void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
+void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status);
 void sendMessage(String message);
 
 
@@ -98,8 +98,9 @@ void wifiInit()
 }
 
 // sending callback
-void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+void onDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
 {
+    (void)tx_info;
     Serial.printf("Message status: ");
     Serial.printf(status == ESP_NOW_SEND_SUCCESS ? "SENT\r\n" : "ERROR\r\n");
 }
