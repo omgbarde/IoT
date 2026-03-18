@@ -8,11 +8,10 @@
   Lorenzo Bardelli: 10831941
 */
 
-#define TEAM_LEADER_CODE 10797420 
-#define AB (TEAM_LEADER_CODE % 100)
-#define SLEEP_TIME_SEC ((AB % 50 + 5) / 10.0) 
+#define TEAM_LEADER_CODE 10797420
+#define SLEEP_TIME_SEC ((20 % 50 + 5) / 10.0)
 
-#define S_uS_CONV 1000000       // conversion factor from us to s
+#define S_uS_CONV 1000000 // conversion factor from us to s
 
 // sensor Pinout
 #define PIR_PIN 12
@@ -30,7 +29,6 @@ void wifiInit();
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
 void sendMessage(String message);
 
-
 void setup()
 {
     startTime = micros();
@@ -41,7 +39,7 @@ void setup()
     // sensor configuration
     pinMode(PIR_PIN, INPUT);
     pinMode(LDR_PIN, INPUT);
-    
+
     Serial.printf("[%d] -- Setup completed\r\n", (int)(micros() - startTime));
 }
 
@@ -56,7 +54,7 @@ void loop()
     // format the message according to requirements
     String motionStr = motionDetected ? "MOTION_DETECTED" : "MOTION_NOT_DETECTED";
     String message = motionStr + "-LUMINOSITY:" + String(luminosity);
-    
+
     Serial.printf("[%d] -- Sensor reading complete: %s\r\n", (int)(micros() - startTime), message.c_str());
 
     // configure WiFi for transmission and send message to sink
@@ -84,9 +82,8 @@ void loop()
 void wifiInit()
 {
     WiFi.mode(WIFI_STA);
-    // TODO look into this
-    WiFi.setTxPower(WIFI_POWER_19_5dBm); // set wifi transmission power to maximum from csv data
-    esp_now_init();                   // init ESP-NOW communication protocol
+    WiFi.setTxPower(WIFI_POWER_2dBm);
+    esp_now_init(); // init ESP-NOW communication protocol
 
     esp_now_register_send_cb(onDataSent); // set sending callback
 
@@ -116,4 +113,4 @@ void sendMessage(String message)
     esp_now_send(addr, data, len);
 }
 
-// top of the morning 
+// top of the morning
