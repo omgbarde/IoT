@@ -1,0 +1,4 @@
+hospital/facility3/area3
+metaverse/room2/floor4
+metaverse/room2/room2
+university/department12/room1/temperature
