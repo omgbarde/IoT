@@ -1,7 +1,0 @@
-      1 basic
-      1 dining_room
-      3 dining_room,door
-      2 dining_room,temperature
-      1 hello_post
-      1 living_room,door
-      2 main_door

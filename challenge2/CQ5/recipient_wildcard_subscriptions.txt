@@ -1,0 +1,7 @@
+51743	house/department3/+
+51743	hospital/+/section0/temperature
+51743	house/department3/+/+
+51743	university/#
+51743	metaverse/+
+51743	house/+/room1/#
+51743	metaverse/facility0/section0/+

@@ -1,0 +1,9 @@
+university/+/+/deposit
+hospital/+/+/light
+metaverse/+/room1/#
+house/department3/+/+
+metaverse/facility0/+/+
+hospital/fxlugs/+/#
+metaverse/+/+/hydraulic_valve
+factory/+/#
+house/+/room1/#

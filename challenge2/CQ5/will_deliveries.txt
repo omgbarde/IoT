@@ -1,0 +1,4 @@
+39551 university/department12/room1/temperature
+53557 university/department12/room1/temperature
+51743 university/department12/room1/temperature
+41789 university/department12/room1/temperature

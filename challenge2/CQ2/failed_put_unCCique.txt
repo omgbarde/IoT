@@ -1,0 +1,11 @@
+10181	dining_room,door
+10680	dining_room
+1330	main_door
+30514	main_door
+33760	dining_room,door
+37991	dining_room,door
+40207	dining_room,temperature
+40939	hello_post
+48174	dining_room,temperature
+50477	basic
+6326	living_room,door

@@ -1,0 +1,10 @@
+2 basic
+1 dining_room
+2 dining_room,door
+5 dining_room,temperature
+3 hello_post
+4 hello_world
+1 living_room
+1 living_room,temperature
+1 main_door
+2 test
