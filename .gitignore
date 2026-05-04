@@ -7,3 +7,5 @@ challenge1/Wokwi
 __pycache__/   
 .npm
 node_modules/
+.env
+mosquitto.db

@@ -1,9 +1,9 @@
 services:
   mosquitto:
     image: eclipse-mosquitto:2
-    container_name: challenge3-mosquitto
-    network_mode: host
     restart: unless-stopped
+    ports:
+      - "${MOSQUITTO_PORT:-1884}:1883"
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
@@ -11,15 +11,15 @@ services:
 
   node-red:
     image: nodered/node-red:latest
-    container_name: challenge3-node-red
-    network_mode: host
     restart: unless-stopped
     depends_on:
       - mosquitto
+    ports:
+      - "${NODERED_PORT:-1880}:1880"
     environment:
       - TZ=Europe/Rome
       - FLOWS=flows.json
+      - THINGSPEAK_WRITE_API_KEY=${THINGSPEAK_WRITE_API_KEY}
     volumes:
       - ./node-red:/data
-      - /home/pitesse/Desktop/IoT:/home/pitesse/Desktop/IoT
-
+      - ..:/workspace/challenge3

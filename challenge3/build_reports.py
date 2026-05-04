@@ -13,7 +13,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-ROOT = Path('/home/pitesse/Desktop/IoT/challenge3')
+ROOT = Path(__file__).resolve().parent
 SUMMARY_PATH = ROOT / 'run_summary.json'
 FILTERED_PATH = ROOT / 'filtered_elems.csv'
 OUTGOING_PATH = ROOT / 'outgoing_cost.csv'

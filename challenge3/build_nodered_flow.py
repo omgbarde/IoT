@@ -6,6 +6,13 @@ FLOW_ID = "f3c8c0e1b9a2419e"
 BROKER_ID = "a8f2c3d4e5f60718"
 UI_TAB_ID = "b1c2d3e4f5a60718"
 UI_GROUP_ID = "c1d2e3f4a5b60718"
+CONTAINER_CHALLENGE_DIR = "/workspace/challenge3"
+CSV_PATH = f"{CONTAINER_CHALLENGE_DIR}/challenge3.csv"
+ID_LOG_PATH = f"{CONTAINER_CHALLENGE_DIR}/id_log.csv"
+FILTERED_PATH = f"{CONTAINER_CHALLENGE_DIR}/filtered_elems.csv"
+OUTGOING_PATH = f"{CONTAINER_CHALLENGE_DIR}/outgoing_cost.csv"
+MQTT_BROKER_HOST = "mosquitto"
+MQTT_BROKER_PORT = "1883"
 
 
 def fn(text: str) -> str:
@@ -88,7 +95,7 @@ nodes = [
         "type": "file in",
         "z": FLOW_ID,
         "name": "Read challenge3.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/challenge3.csv",
+        "filename": CSV_PATH,
         "filenameType": "str",
         "format": "utf8",
         "chunk": False,
@@ -182,7 +189,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Init id_log.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/id_log.csv",
+        "filename": ID_LOG_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -197,7 +204,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Init filtered_elems.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/filtered_elems.csv",
+        "filename": FILTERED_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -212,7 +219,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Init outgoing_cost.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/outgoing_cost.csv",
+        "filename": OUTGOING_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -310,7 +317,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Append id_log.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/id_log.csv",
+        "filename": ID_LOG_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -773,7 +780,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Append filtered_elems.csv",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/filtered_elems.csv",
+        "filename": FILTERED_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -852,7 +859,7 @@ nodes = [
         "type": "file",
         "z": FLOW_ID,
         "name": "Write outgoing_cost.csv (final)",
-        "filename": "/home/pitesse/Desktop/IoT/challenge3/outgoing_cost.csv",
+        "filename": OUTGOING_PATH,
         "filenameType": "str",
         "appendNewline": False,
         "createDir": False,
@@ -939,7 +946,7 @@ nodes = [
         "name": "ThingSpeak response",
         "active": True,
         "tosidebar": True,
-        "console": False,
+        "console": True,
         "tostatus": False,
         "complete": "payload",
         "targetType": "msg",
@@ -969,9 +976,9 @@ nodes = [
     {
         "id": BROKER_ID,
         "type": "mqtt-broker",
-        "name": "Local Mosquitto 1884",
-        "broker": "localhost",
-        "port": "1884",
+        "name": "Local Mosquitto (Docker)",
+        "broker": MQTT_BROKER_HOST,
+        "port": MQTT_BROKER_PORT,
         "clientid": "",
         "autoConnect": True,
         "usetls": False,
@@ -1018,6 +1025,6 @@ nodes = [
     },
 ]
 
-output_path = Path("challenge3/nodered.txt")
+output_path = Path(__file__).resolve().parent / "nodered.txt"
 output_path.write_text(json.dumps(nodes, indent=2), encoding="utf-8")
 print(f"Wrote {output_path}")

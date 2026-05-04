@@ -211,9 +211,10 @@ def write_csv(path, fieldnames, rows):
 
 
 def main():
+    default_root = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description="Generate Challenge 3 output CSV files from challenge3.csv")
-    parser.add_argument("--input", default="challenge3/challenge3.csv", help="Input challenge CSV")
-    parser.add_argument("--outdir", default="challenge3", help="Output directory")
+    parser.add_argument("--input", default=str(default_root / "challenge3.csv"), help="Input challenge CSV")
+    parser.add_argument("--outdir", default=str(default_root), help="Output directory")
     parser.add_argument("--messages", type=int, default=200, help="Number of ID messages to process")
     parser.add_argument("--seed", type=int, default=20260430, help="RNG seed for reproducibility")
     parser.add_argument("--start-ts", type=int, default=int(time.time()), help="Start UNIX timestamp")
