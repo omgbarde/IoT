@@ -62,6 +62,7 @@ nodes = [
         "func": fn(
             """
             flow.set("processDone", false);
+            flow.set("publisherDone", false);
             flow.set("subCount", 0);
             flow.set("idNo", 0);
             flow.set("filteredNo", 0);
@@ -263,10 +264,22 @@ nodes = [
         "name": "Generate ID + log line",
         "func": fn(
             """
+            // stop publishing after 300 generated id messages.
+            // this only limits the publisher branch; processing still stops at first 200 subscribed ids.
+            if (flow.get("publisherDone")) {
+              return [null, null];
+            }
+
             let no = flow.get("idNo") || 0;
+            if (no >= 300) {
+              flow.set("publisherDone", true);
+              node.warn("publisher reached 300 messages and is now stopped");
+              return [null, null];
+            }
             no += 1;
             flow.set("idNo", no);
 
+            // generate random id and current unix timestamp, then publish + log.
             const id = Math.floor(Math.random() * 30001);
             const ts = Math.floor(Date.now() / 1000);
             const payload = { id, timestamp: ts };
@@ -353,6 +366,7 @@ nodes = [
         "name": "Count <= 200 + compute N",
         "func": fn(
             """
+            // process only the first 200 subscribed id messages.
             if (flow.get("processDone")) {
               return null;
             }
@@ -384,6 +398,7 @@ nodes = [
               return null;
             }
             if (count === 200) {
+              // keep the 200th message, then stop processing subsequent ones.
               flow.set("processDone", true);
             }
 
@@ -419,6 +434,7 @@ nodes = [
             const packet = packetIndex[msg.n];
 
             if (!packet) {
+              // notify missing packet rows without breaking the flow.
               node.warn(`No packet for N=${msg.n}`);
               return [null, null, null, null, null, null, null];
             }
@@ -429,6 +445,7 @@ nodes = [
               try {
                 return Function(`"use strict"; return (${text});`)();
               } catch (e) {
+                // invalid command strings are ignored for this packet.
                 node.warn(`Command parse failed for N=${msg.n}`);
                 return {};
               }
@@ -517,6 +534,7 @@ nodes = [
             let endMsg = null;
 
             if (hasZcl) {
+              // build the mqtt payload exactly from csv fields plus current timestamp/sub id.
               const publishTs = Math.floor(Date.now() / 1000);
               const deviceName = String(packet["Device Name ZigBee Source"] || "");
 
@@ -558,6 +576,7 @@ nodes = [
 
                 if (!dtypeClean || dataValue === "") continue;
 
+                // write filtered csv rows only for active power/rms current/rms voltage.
                 filteredNo += 1;
                 filteredMsgs.push({
                   payload: `${filteredNo},${publishTs},${sequence},${targetLabel},${statusClean},${dtypeClean},${dataValue}\\n`
@@ -577,6 +596,7 @@ nodes = [
             }
 
             if (isLinkStatus) {
+              // keep latest outgoing cost by source->destination.
               const outgoing = flow.get("outgoingCostMap") || {};
               const src = String(packet["Source Address ZigBee"] || "");
 
@@ -594,6 +614,7 @@ nodes = [
             }
 
             if (msg.sub_count === 200) {
+              // finalize outgoing_cost.csv and prepare sorted thingspeak queue once.
               const outgoing = flow.get("outgoingCostMap") || {};
               const sources = Object.keys(outgoing).sort(hexSort);
               let lineNo = 0;

@@ -16,6 +16,9 @@ if ! docker compose -f "${SCRIPT_DIR}/docker-compose.yml" ps --services --status
   exit 1
 fi
 
+echo "Removing stale output CSVs from previous runs..."
+rm -f "${ID_LOG}" "${FILTERED}" "${OUTGOING}" "${TS_QUEUE}"
+
 START_TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 echo "Restarting Node-RED to start a clean 200-message run..."
 docker compose -f "${SCRIPT_DIR}/docker-compose.yml" restart node-red >/dev/null
