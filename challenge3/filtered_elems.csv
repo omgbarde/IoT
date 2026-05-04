@@ -20,3 +20,15 @@ No.,Timestamp,Sequence Number,Attribute,Status,Data Type,Data Value
 19,1777909581,243,Active Power,Success,16-Bit Signed Integer,0
 20,1777909581,243,RMS Current,Success,16-Bit Unsigned Integer,0
 21,1777909581,243,RMS Voltage,Success,16-Bit Unsigned Integer,219
+22,1777909656,25,Active Power,Success,16-Bit Signed Integer,0
+23,1777909656,25,RMS Current,Success,16-Bit Unsigned Integer,0
+24,1777909656,25,RMS Voltage,Success,16-Bit Unsigned Integer,221
+25,1777909669,146,RMS Voltage,,16-Bit Unsigned Integer,218
+26,1777909669,146,RMS Current,,16-Bit Unsigned Integer,0
+27,1777909669,146,Active Power,,16-Bit Signed Integer,0
+28,1777909681,217,RMS Voltage,,16-Bit Unsigned Integer,221
+29,1777909681,217,RMS Current,,16-Bit Unsigned Integer,0
+30,1777909681,217,Active Power,,16-Bit Signed Integer,0
+31,1777909690,37,RMS Voltage,,16-Bit Unsigned Integer,221
+32,1777909690,37,RMS Current,,16-Bit Unsigned Integer,0
+33,1777909690,37,Active Power,,16-Bit Signed Integer,0
