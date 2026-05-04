@@ -5,3 +5,5 @@ challenge1/Wokwi
 *.ipynb_checkpoints
 *.pyc
 __pycache__/   
+.npm
+node_modules/

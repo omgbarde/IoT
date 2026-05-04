@@ -1,0 +1,8 @@
+{
+  "name": "challenge3-node-red",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "node-red-dashboard": "^3.6.6"
+  }
+}
