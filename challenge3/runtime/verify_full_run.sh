@@ -56,7 +56,12 @@ docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs --since "${START_TS}" 
 
 echo
 echo "=== Output CSV line counts ==="
-wc -l "${ID_LOG}" "${FILTERED}" "${OUTGOING}" "${TS_QUEUE}"
+wc -l "${ID_LOG}" "${FILTERED}" "${OUTGOING}"
+if [ -f "${TS_QUEUE}" ]; then
+  wc -l "${TS_QUEUE}"
+else
+  echo "(optional helper not present) ${TS_QUEUE}"
+fi
 
 echo
 echo "=== Validation checks ==="

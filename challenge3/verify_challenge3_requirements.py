@@ -58,12 +58,12 @@ def main():
     func_text = "\n".join(n.get("func", "") for n in funcs)
     check("Math.random() * 30001" in func_text, "Random ID range uses 0..30000", fails=fails)
     check("((idInt % 5218) + 5218) % 5218" in func_text, "Modulo N uses fixed 5218", fails=fails)
-    check("count >= 200" in func_text, "Subscriber hard-stop at 200 IDs", fails=fails)
-    check("no >= 200" in func_text, "Generator also stops after 200 IDs", fails=fails)
+    check(("count > 200" in func_text and "count === 200" in func_text), "Subscriber processes only first 200 IDs", fails=fails)
+    check("processDone" in func_text, "Flow stops processing after first 200 subscribed IDs", fails=fails)
     check("Layer ZBEE_ZCL" in func_text, "ZBEE_ZCL branch detection present", fails=fails)
     check("Link Status (0x08)" in func_text, "Link Status branch detection present", fails=fails)
     check("ThingSpeak key missing" in func_text, "ThingSpeak key handling present", fails=fails)
-    check("toHex(addr)" in func_text and "if (!text.startsWith(\"0x\"))" in func_text, "Hex normalization helper present", fails=fails)
+    check("\"wpan.src\": String(packet[\"Source Address\"]" in func_text, "Addresses are forwarded from CSV without rewriting", fails=fails)
 
     mqtt_in_nodes = by_type(nodes, "mqtt in")
     mqtt_out_nodes = by_type(nodes, "mqtt out")
@@ -91,7 +91,7 @@ def main():
         rows = list(csv.DictReader(ID_LOG.open(newline="", encoding="utf-8")))
         seq_ok = all(int(r["No."]) == i + 1 for i, r in enumerate(rows))
         check(seq_ok, "id_log.csv row numbers incremental", details=f"rows={len(rows)}", fails=fails)
-        check(len(rows) == 200, "id_log.csv contains exactly 200 data rows", details=f"rows={len(rows)}", fails=fails)
+        check(len(rows) >= 200, "id_log.csv contains at least 200 data rows", details=f"rows={len(rows)}", fails=fails)
 
     if FILTERED.exists():
         header = csv_header(FILTERED)

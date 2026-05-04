@@ -61,7 +61,7 @@ nodes = [
         "name": "Init state + CSV headers",
         "func": fn(
             """
-            flow.set("done", false);
+            flow.set("processDone", false);
             flow.set("subCount", 0);
             flow.set("idNo", 0);
             flow.set("filteredNo", 0);
@@ -263,15 +263,7 @@ nodes = [
         "name": "Generate ID + log line",
         "func": fn(
             """
-            if (flow.get("done")) {
-              return [null, null];
-            }
-
             let no = flow.get("idNo") || 0;
-            if (no >= 200) {
-              flow.set("done", true);
-              return [null, null];
-            }
             no += 1;
             flow.set("idNo", no);
 
@@ -361,7 +353,7 @@ nodes = [
         "name": "Count <= 200 + compute N",
         "func": fn(
             """
-            if (flow.get("done")) {
+            if (flow.get("processDone")) {
               return null;
             }
 
@@ -387,8 +379,12 @@ nodes = [
             count += 1;
             flow.set("subCount", count);
 
-            if (count >= 200) {
-              flow.set("done", true);
+            if (count > 200) {
+              flow.set("processDone", true);
+              return null;
+            }
+            if (count === 200) {
+              flow.set("processDone", true);
             }
 
             const idInt = Math.trunc(id);
@@ -419,160 +415,51 @@ nodes = [
         "name": "Process packet + outputs",
         "func": fn(
             """
-            const packetIndex = flow.get("csvIndex");
-            if (!packetIndex || Object.keys(packetIndex).length === 0) {
-              node.warn("CSV index not ready yet");
-              return [null, null, null, null, null, null, null];
-            }
-
+            const packetIndex = flow.get("csvIndex") || {};
             const packet = packetIndex[msg.n];
+
             if (!packet) {
+              node.warn(`No packet for N=${msg.n}`);
               return [null, null, null, null, null, null, null];
             }
 
             function parseCommand(raw) {
               const text = String(raw || "").trim();
-              if (!text) {
-                return {};
-              }
+              if (!text) return {};
               try {
                 return Function(`"use strict"; return (${text});`)();
               } catch (e) {
+                node.warn(`Command parse failed for N=${msg.n}`);
                 return {};
               }
             }
 
-            function toHex(addr) {
-              let text = String(addr || "").trim().toLowerCase();
-              if (!text) {
-                return "";
-              }
-              if (!text.startsWith("0x")) {
-                if (/^[0-9a-f]+$/.test(text)) {
-                  text = `0x${text}`;
-                } else {
-                  return text;
-                }
-              }
-              const n = parseInt(text, 16);
-              if (Number.isNaN(n)) {
-                return text;
-              }
-              const digits = n.toString(16);
-              const width = Math.max(4, digits.length);
-              return `0x${digits.padStart(width, "0")}`;
-            }
-
             function cleanLabel(v) {
-              return String(v || "")
-                .replace(/\\s*\\(0x[0-9a-fA-F]+\\)\\s*$/, "")
-                .trim();
+              return String(v || "").replace(/\\s*\\(0x[0-9a-fA-F]+\\)\\s*$/, "").trim();
             }
 
             function asArray(v) {
-              if (Array.isArray(v)) {
-                return v;
-              }
-              if (v === undefined || v === null || v === "") {
-                return [];
-              }
+              if (Array.isArray(v)) return v;
+              if (v === undefined || v === null || v === "") return [];
               return [v];
             }
 
-            function pickByIndex(arr, i) {
-              if (!arr || arr.length === 0) {
-                return "";
-              }
-              if (i < arr.length) {
-                return arr[i];
-              }
-              return arr[arr.length - 1];
-            }
-
             function normalizeValue(raw) {
-              if (raw === undefined || raw === null) {
-                return "";
-              }
-              if (typeof raw === "number") {
-                return String(Math.trunc(raw));
-              }
-              const text = String(raw).trim();
-              if (!text) {
-                return "";
-              }
+              const text = String(raw ?? "").trim();
+              if (!text) return "";
               const intMatch = text.match(/^-?\\d+/);
-              if (intMatch) {
-                return intMatch[0];
-              }
+              if (intMatch) return intMatch[0];
               const hexOnly = text.match(/^0x([0-9a-fA-F]+)$/);
-              if (hexOnly) {
-                return String(parseInt(hexOnly[1], 16));
-              }
+              if (hexOnly) return String(parseInt(hexOnly[1], 16));
               return text;
             }
 
-            function extractValueForType(dtypeRaw, cmdObj, cursors, typeCodeToField) {
+            function valueForDataType(dtypeRaw, cmdObj, cursors) {
               const dtypeText = String(dtypeRaw || "");
               const codeMatch = dtypeText.match(/\\((0x[0-9a-fA-F]+)\\)/);
-              if (!codeMatch) {
-                return "";
-              }
-              const code = codeMatch[1].toLowerCase();
-              const field = typeCodeToField[code];
-              if (!field) {
-                return "";
-              }
-              const raw = cmdObj[field];
-              if (Array.isArray(raw)) {
-                const cursor = cursors[field] || 0;
-                const picked = raw.length > 0 ? (cursor < raw.length ? raw[cursor] : raw[raw.length - 1]) : "";
-                cursors[field] = cursor + 1;
-                return normalizeValue(picked);
-              }
-              cursors[field] = (cursors[field] || 0) + 1;
-              return normalizeValue(raw);
-            }
+              if (!codeMatch) return "";
 
-            function hexSort(a, b) {
-              return parseInt(a, 16) - parseInt(b, 16);
-            }
-
-            const cmd = parseCommand(packet["Command String"]);
-            const hasZcl = Object.prototype.hasOwnProperty.call(cmd, "Layer ZBEE_ZCL");
-            const isLinkStatus = packet["Packet Type"] === "Link Status (0x08)";
-
-            let zclMsg = null;
-            let filteredMsgs = [];
-            let currentMsgs = [];
-            let voltageMsgs = [];
-            let outgoingMsgs = [];
-            let thingSpeakMsgs = [];
-            let endMsg = null;
-
-            if (hasZcl) {
-              const publishTs = Math.floor(Date.now() / 1000);
-              const deviceName = String(packet["Device Name ZigBee Source"] || "unknown");
-
-              zclMsg = {
-                topic: deviceName,
-                payload: {
-                  timestamp: publishTs,
-                  id: msg.sub_id,
-                  "wpan.src": toHex(packet["Source Address"]),
-                  "wpan.dst": toHex(packet["Destination Address"]),
-                  "zbee.src": toHex(packet["Source Address ZigBee"]),
-                  "zbee.dst": toHex(packet["Destination Address ZigBee"]),
-                  topic: `ZigBee/${deviceName}`,
-                  payload: String(packet["Command String"] || "")
-                }
-              };
-
-              const attrs = asArray(cmd["Attribute"]);
-              const statuses = asArray(cmd["Status"]);
-              const dataTypes = asArray(cmd["Data Type"]);
-              const sequence = String(cmd["Sequence Number"] || "");
-
-              const typeCodeToField = {
+              const dataTypeToField = {
                 "0x10": "Boolean",
                 "0x18": "Bitmap8",
                 "0x19": "Bitmap16",
@@ -598,39 +485,90 @@ nodes = [
                 "0x31": "Enum16"
               };
 
+              const field = dataTypeToField[codeMatch[1].toLowerCase()];
+              if (!field) return "";
+
+              const raw = cmdObj[field];
+              if (Array.isArray(raw)) {
+                const cursor = cursors[field] || 0;
+                const picked = raw.length > 0 ? (cursor < raw.length ? raw[cursor] : raw[raw.length - 1]) : "";
+                cursors[field] = cursor + 1;
+                return normalizeValue(picked);
+              }
+
+              cursors[field] = (cursors[field] || 0) + 1;
+              return normalizeValue(raw);
+            }
+
+            function hexSort(a, b) {
+              return parseInt(a, 16) - parseInt(b, 16);
+            }
+
+            const cmd = parseCommand(packet["Command String"]);
+            const hasZcl = Object.prototype.hasOwnProperty.call(cmd, "Layer ZBEE_ZCL");
+            const isLinkStatus = packet["Packet Type"] === "Link Status (0x08)";
+
+            let zclMsg = null;
+            let filteredMsgs = [];
+            let currentMsgs = [];
+            let voltageMsgs = [];
+            let outgoingMsgs = [];
+            let thingSpeakMsgs = [];
+            let endMsg = null;
+
+            if (hasZcl) {
+              const publishTs = Math.floor(Date.now() / 1000);
+              const deviceName = String(packet["Device Name ZigBee Source"] || "");
+
+              zclMsg = {
+                topic: deviceName,
+                payload: {
+                  timestamp: publishTs,
+                  id: msg.sub_id,
+                  "wpan.src": String(packet["Source Address"] || ""),
+                  "wpan.dst": String(packet["Destination Address"] || ""),
+                  "zbee.src": String(packet["Source Address ZigBee"] || ""),
+                  "zbee.dst": String(packet["Destination Address ZigBee"] || ""),
+                  topic: `ZigBee/${deviceName}`,
+                  payload: String(packet["Command String"] || "")
+                }
+              };
+
+              const attrs = asArray(cmd["Attribute"]);
+              const statuses = asArray(cmd["Status"]);
+              const dataTypes = asArray(cmd["Data Type"]);
               const targetNames = {
                 "active power": "Active Power",
                 "rms current": "RMS Current",
                 "rms voltage": "RMS Voltage"
               };
-
+              const sequence = String(cmd["Sequence Number"] || "");
               const valueCursors = {};
               let filteredNo = flow.get("filteredNo") || 0;
 
               for (let i = 0; i < attrs.length; i += 1) {
-                const attrName = cleanLabel(attrs[i]);
-                const targetLabel = targetNames[attrName.toLowerCase()];
+                const targetLabel = targetNames[cleanLabel(attrs[i]).toLowerCase()];
+                if (!targetLabel) continue;
 
-                const dtypeRaw = pickByIndex(dataTypes, i);
-                const statusRaw = pickByIndex(statuses, i);
+                const dtypeRaw = i < dataTypes.length ? dataTypes[i] : (dataTypes.length ? dataTypes[dataTypes.length - 1] : "");
+                const statusRaw = i < statuses.length ? statuses[i] : (statuses.length ? statuses[statuses.length - 1] : "");
                 const dtypeClean = cleanLabel(dtypeRaw);
                 const statusClean = cleanLabel(statusRaw);
-                const dataValue = extractValueForType(dtypeRaw, cmd, valueCursors, typeCodeToField);
+                const dataValue = valueForDataType(dtypeRaw, cmd, valueCursors);
 
-                if (targetLabel && dtypeClean && dataValue !== "") {
-                  filteredNo += 1;
-                  filteredMsgs.push({
-                    payload: `${filteredNo},${publishTs},${sequence},${targetLabel},${statusClean},${dtypeClean},${dataValue}\\n`
-                  });
+                if (!dtypeClean || dataValue === "") continue;
 
-                  const numMatch = String(dataValue).match(/-?\\d+/);
-                  if (numMatch) {
-                    const n = Number(numMatch[0]);
-                    if (targetLabel === "RMS Current") {
-                      currentMsgs.push({ payload: n, topic: "RMS Current" });
-                    } else if (targetLabel === "RMS Voltage") {
-                      voltageMsgs.push({ payload: n, topic: "RMS Voltage" });
-                    }
+                filteredNo += 1;
+                filteredMsgs.push({
+                  payload: `${filteredNo},${publishTs},${sequence},${targetLabel},${statusClean},${dtypeClean},${dataValue}\\n`
+                });
+
+                if (targetLabel === "RMS Current" || targetLabel === "RMS Voltage") {
+                  const m = String(dataValue).match(/-?\\d+/);
+                  if (m) {
+                    const numericValue = Number(m[0]);
+                    if (targetLabel === "RMS Current") currentMsgs.push({ payload: numericValue, topic: "RMS Current" });
+                    if (targetLabel === "RMS Voltage") voltageMsgs.push({ payload: numericValue, topic: "RMS Voltage" });
                   }
                 }
               }
@@ -640,38 +578,31 @@ nodes = [
 
             if (isLinkStatus) {
               const outgoing = flow.get("outgoingCostMap") || {};
-              const src = toHex(packet["Source Address ZigBee"]);
+              const src = String(packet["Source Address ZigBee"] || "");
+
               if (src) {
-                if (!outgoing[src]) {
-                  outgoing[src] = {};
-                }
+                if (!outgoing[src]) outgoing[src] = {};
                 const links = Array.isArray(cmd["Links"]) ? cmd["Links"] : [];
                 for (const link of links) {
-                  if (!link || typeof link !== "object") {
-                    continue;
-                  }
-                  const dst = toHex(link["Address"]);
-                  if (!dst) {
-                    continue;
-                  }
-                  outgoing[src][dst] = String(link["Outgoing Cost"] ?? "").trim();
+                  const dst = String(link?.["Address"] || "");
+                  if (!dst) continue;
+                  outgoing[src][dst] = String(link?.["Outgoing Cost"] ?? "").trim();
                 }
               }
+
               flow.set("outgoingCostMap", outgoing);
             }
 
             if (msg.sub_count === 200) {
               const outgoing = flow.get("outgoingCostMap") || {};
               const sources = Object.keys(outgoing).sort(hexSort);
-
               let lineNo = 0;
+
               for (const src of sources) {
                 const destinations = Object.keys(outgoing[src]).sort(hexSort);
                 for (const dst of destinations) {
                   lineNo += 1;
-                  outgoingMsgs.push({
-                    payload: `${lineNo},${src},${dst},${outgoing[src][dst]}\\n`
-                  });
+                  outgoingMsgs.push({ payload: `${lineNo},${src},${dst},${outgoing[src][dst]}\\n` });
                 }
               }
 
@@ -691,18 +622,16 @@ nodes = [
                 }
               }
 
-              endMsg = {
-                payload: `Stopped at 200 IDs. outgoing_cost rows: ${lineNo}. ThingSpeak queue: ${thingSpeakMsgs.length}.`
-              };
+              endMsg = { payload: `Processed first 200 subscribed IDs. outgoing_cost rows: ${lineNo}. ThingSpeak queue: ${thingSpeakMsgs.length}.` };
             }
 
             return [
               zclMsg,
-              filteredMsgs.length > 0 ? filteredMsgs : null,
-              currentMsgs.length > 0 ? currentMsgs : null,
-              voltageMsgs.length > 0 ? voltageMsgs : null,
-              outgoingMsgs.length > 0 ? outgoingMsgs : null,
-              thingSpeakMsgs.length > 0 ? thingSpeakMsgs : null,
+              filteredMsgs.length ? filteredMsgs : null,
+              currentMsgs.length ? currentMsgs : null,
+              voltageMsgs.length ? voltageMsgs : null,
+              outgoingMsgs.length ? outgoingMsgs : null,
+              thingSpeakMsgs.length ? thingSpeakMsgs : null,
               endMsg
             ];
             """
